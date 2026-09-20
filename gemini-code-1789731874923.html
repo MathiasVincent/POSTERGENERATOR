@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Editorial Tour Poster Generator Preview</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * {
+      font-family: Arial, "Helvetica Neue", Helvetica, sans-serif !important;
+      box-sizing: border-box;
+      -webkit-font-smoothing: antialiased;
+    }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #181818; }
+    ::-webkit-scrollbar-thumb { background: #383838; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #555; }
+    input[type="range"] { accent-color: #ffffff; }
+    .poster-canvas {
+      width: 780px;
+      min-height: 1100px;
+      box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.7);
+      transition: background-color 0.15s ease;
+    }
+    .nav-tab.active {
+      border-bottom: 2px solid #ffffff;
+      color: #ffffff;
+    }
+    .cinema-card {
+      transition: border-color 0.15s ease;
+    }
+    .cinema-card:hover {
+      border-color: #555;
+    }
+  </style>
+</head>
+<body class="bg-[#111111] text-neutral-200 min-h-screen flex flex-col antialiased">
+
+  <!-- Top Navigation Header -->
+  <header class="w-full bg-[#181818] border-b border-neutral-800 px-5 py-2.5 flex items-center justify-between sticky top-0 z-50">
+    <div class="flex items-center gap-3">
+      <div class="w-3 h-3 bg-white"></div>
+      <h1 class="text-xs font-bold tracking-wider text-white uppercase">Editorial Tour Poster Generator</h1>
+      <span class="text-[11px] text-neutral-500 font-mono pl-2 border-l border-neutral-700">Typography Weights & Controls</span>
+    </div>
+
+    <!-- Quick Global Actions -->
+    <div class="flex items-center gap-2">
+      <div class="flex items-center bg-[#222] rounded px-2 py-1 border border-neutral-700 text-[11px] gap-1.5">
+        <span class="text-neutral-400">Zoom:</span>
+        <button onclick="setZoom(0.65)" class="px-1 text-neutral-400 hover:text-white">65%</button>
+        <button onclick="setZoom(0.85)" class="px-1 text-neutral-400 hover:text-white">85%</button>
+        <button onclick="setZoom(1.0)" class="px-1 text-white font-bold">100%</button>
+      </div>
+
+      <button onclick="rollClusterSeed()" class="bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-semibold px-2.5 py-1 rounded border border-neutral-600 flex items-center gap-1 transition">
+        <span>🎲</span> Roll Seed
+      </button>
+
+      <button onclick="exportCleanVectorSVG()" class="bg-white hover:bg-neutral-200 text-black text-xs font-bold px-3 py-1 rounded transition flex items-center gap-1">
+        <span>↓</span> SVG
+      </button>
+
+      <button onclick="exportPNG()" id="pngExportBtn" class="bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-bold px-3 py-1 rounded border border-neutral-700 transition">
+        Eksportér PNG
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Grid Workspace -->
+  <div class="flex-1 flex flex-col lg:flex-row w-full overflow-y-auto">
+    
+    <!-- LEFT: Sidebar Navigation & Controls -->
+    <aside class="w-full lg:w-[460px] bg-[#161616] border-r border-neutral-800 flex flex-col shrink-0 lg:max-h-[calc(100vh-45px)] overflow-y-auto">
+      
+      <!-- Sub-tabs for Settings -->
+      <div class="flex border-b border-neutral-800 bg-[#141414] sticky top-0 z-20 text-[11px] font-medium">
+        <button onclick="switchTab('data')" id="tabBtn-data" class="nav-tab active flex-1 py-2.5 px-1 text-center hover:text-white transition">
+          Biografer (<span id="totalVenueCount">0</span>)
+        </button>
+        <button onclick="switchTab('layout')" id="tabBtn-layout" class="nav-tab flex-1 py-2.5 px-1 text-center text-neutral-400 hover:text-white transition">
+          Cluster & Grid
+        </button>
+        <button onclick="switchTab('typography')" id="tabBtn-typography" class="nav-tab flex-1 py-2.5 px-1 text-center text-neutral-400 hover:text-white transition">
+          Typografi
+        </button>
+        <button onclick="switchTab('docking')" id="tabBtn-docking" class="nav-tab flex-1 py-2.5 px-1 text-center text-neutral-400 hover:text-white transition">
+          Docking
+        </button>
+        <button onclick="switchTab('colors')" id="tabBtn-colors" class="nav-tab flex-1 py-2.5 px-1 text-center text-neutral-400 hover:text-white transition">
+          Farver & Bokse
+        </button>
+      </div>
+
+      <!-- TAB 1: DATA -->
+      <div id="tab-data" class="p-3.5 space-y-3">
+        <div class="flex items-center justify-between pb-2 border-b border-neutral-800">
+          <div>
+            <h2 class="text-xs font-bold uppercase tracking-wider text-white">Biograf-Kort</h2>
+            <p class="text-[10px] text-neutral-400">Hver biograf redigeres i sin egen boks.</p>
+          </div>
+          <button onclick="addNewCinemaCard()" class="text-xs bg-white text-black font-bold px-2.5 py-1 rounded hover:bg-neutral-200 transition">
+            + Tilføj
+          </button>
+        </div>
+
+        <div class="flex gap-1 overflow-x-auto pb-1 text-[11px]">
+          <button onclick="filterRegionTab('ALL')" id="filter-ALL" class="region-filter-btn px-2.5 py-1 rounded bg-white text-black font-bold">Alle</button>
+          <button onclick="filterRegionTab('København')" id="filter-København" class="region-filter-btn px-2 py-1 rounded bg-neutral-800 text-neutral-300">København</button>
+          <button onclick="filterRegionTab('Sjælland og øer')" id="filter-Sjælland og øer" class="region-filter-btn px-2 py-1 rounded bg-neutral-800 text-neutral-300">Sjælland</button>
+          <button onclick="filterRegionTab('Fyn')" id="filter-Fyn" class="region-filter-btn px-2 py-1 rounded bg-neutral-800 text-neutral-300">Fyn</button>
+          <button onclick="filterRegionTab('Jylland')" id="filter-Jylland" class="region-filter-btn px-2 py-1 rounded bg-neutral-800 text-neutral-300">Jylland</button>
+        </div>
+
+        <div id="cinemaCardsList" class="space-y-2 max-h-[580px] overflow-y-auto pr-1"></div>
+
+        <div class="pt-1">
+          <button onclick="resetToCleanDataset()" class="text-[11px] text-neutral-400 hover:text-white underline">
+            Nulstil til standard (uden tankestreger)
+          </button>
+        </div>
+      </div>
+
+      <!-- TAB 2: LAYOUT -->
+      <div id="tab-layout" class="p-3.5 space-y-4 hidden">
+        <div>
+          <h2 class="text-xs font-bold uppercase tracking-wider text-white mb-1.5">Layout Type</h2>
+          <div class="grid grid-cols-3 gap-1.5">
+            <button onclick="setLayoutMode('cluster')" id="btn-mode-cluster" class="layout-btn text-xs py-1.5 border border-white bg-white text-black font-bold rounded">
+              Klynge (Cluster)
+            </button>
+            <button onclick="setLayoutMode('strip')" id="btn-mode-strip" class="layout-btn text-xs py-1.5 border border-neutral-700 bg-neutral-800 text-neutral-300 rounded">
+              Løbende Bånd
+            </button>
+            <button onclick="setLayoutMode('grid')" id="btn-mode-grid" class="layout-btn text-xs py-1.5 border border-neutral-700 bg-neutral-800 text-neutral-300 rounded">
+              Grid
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-2.5 bg-[#202020] p-3 rounded border border-neutral-800">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-neutral-200">Afstande Mellem Sæt</span>
+            <button onclick="toggleLinkedGap()" id="linkGapBtn" class="text-[10px] px-2 py-0.5 rounded bg-neutral-800 text-neutral-300 border border-neutral-700">
+              ⚲ Uafhængig
+            </button>
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-neutral-400">Vandret Afstand (Gap X)</span>
+              <span id="gapXVal" class="font-mono text-white">0px</span>
+            </div>
+            <input type="range" id="gapXSlider" min="-10" max="50" value="0" step="1" oninput="updateGapX(this.value)" class="w-full">
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-neutral-400">Lodret Afstand (Gap Y — kan gå i minus)</span>
+              <span id="gapYVal" class="font-mono text-white">0px</span>
+            </div>
+            <input type="range" id="gapYSlider" min="-20" max="50" value="0" step="1" oninput="updateGapY(this.value)" class="w-full">
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-neutral-400">Cluster Asymmetri / Drift</span>
+              <span id="clusterDriftVal" class="font-mono text-white">0px</span>
+            </div>
+            <input type="range" id="clusterDriftSlider" min="0" max="120" value="0" step="1" oninput="updateClusterDrift(this.value)" class="w-full">
+          </div>
+        </div>
+
+        <div class="space-y-2.5 bg-[#202020] p-3 rounded border border-neutral-800">
+          <div class="flex justify-between text-xs">
+            <span class="text-xs font-bold text-neutral-200">Global Skalering</span>
+            <span id="globalScaleVal" class="font-mono text-white">100%</span>
+          </div>
+          <input type="range" id="globalScaleSlider" min="50" max="150" value="100" step="1" oninput="updateGlobalScale(this.value)" class="w-full">
+
+          <div class="pt-2 flex items-center justify-between border-t border-neutral-800">
+            <span class="text-xs text-neutral-300">Horisontal Udfyldning</span>
+            <input type="checkbox" id="autoFillToggle" checked onchange="toggleAutoFill(this.checked)" class="w-4 h-4 accent-white">
+          </div>
+        </div>
+
+        <div class="space-y-2 bg-[#202020] p-3 rounded border border-neutral-800">
+          <div class="flex justify-between text-xs">
+            <span class="text-neutral-400">Afstand Mellem Regioner</span>
+            <span id="regionMarginVal" class="font-mono text-white">35px</span>
+          </div>
+          <input type="range" id="regionMarginSlider" min="10" max="100" value="35" step="2" oninput="updateRegionMargin(this.value)" class="w-full">
+        </div>
+      </div>
+
+      <!-- TAB 3: TYPOGRAFI (MED VÆGT OG ADRESSE SLIDERS) -->
+      <div id="tab-typography" class="p-3.5 space-y-3.5 hidden">
+        
+        <!-- 1. Biografnavne -->
+        <div class="space-y-2.5 bg-[#202020] p-3 rounded border border-neutral-800">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-white">Biografnavne</span>
+            <div class="flex gap-1 text-[10px]">
+              <button onclick="setVenueWeight('normal')" id="venueWeightNormal" class="px-2 py-0.5 rounded border border-neutral-700 bg-neutral-800 text-neutral-300">Normal</button>
+              <button onclick="setVenueWeight('bold')" id="venueWeightBold" class="px-2 py-0.5 rounded border border-white bg-white text-black font-bold">Fed</button>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-neutral-400">Skriftstørrelse</span>
+              <span id="venueFontSizeVal" class="font-mono text-white">22px</span>
+            </div>
+            <input type="range" id="venueFontSizeSlider" min="12" max="42" value="22" step="1" oninput="updateVenueFontSize(this.value)" class="w-full">
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-neutral-400">Kerning / Tracking</span>
+              <span id="venueLetterSpacingVal" class="font-mono text-white">-0.5px</span>
+            </div>
+            <input type="range" id="venueLetterSpacingSlider" min="-3" max="6" value="-0.5" step="0.1" oninput="updateVenueLetterSpacing(this.value)" class="w-full">
+          </div>
+        </div>
+
+        <!-- 2. Postnummer -->
+        <div class="space-y-2.5 bg-[#202020] p-3 rounded border border-neutral-800">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-white">Postnummer</span>
+            <div class="flex gap-1 text-[10px]">
+              <button onclick="setPostcodeWeight('normal')" id="postcodeWeightNormal" class="px-2 py-0.5 rounded border border-white bg-white text-black font-bold">Normal</button>
+              <button onclick="setPostcodeWeight('bold')" id="postcodeWeightBold" class="px-2 py-0.5 rounded border border-neutral-700 bg-neutral-800 text-neutral-300">Fed</button>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-neutral-400">Skriftstørrelse</span>
+              <span id="postcodeFontSizeVal" class="font-mono text-white">16px</span>
+            </div>
+            <input type="range" id="postcodeFontSizeSlider" min="10" max="32" value="16" step="1" oninput="updatePostcodeFontSize(this.value)" class="w-full">
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-neutral-400">Kerning / Tracking</span>
+              <span id="postcodeLetterSpacingVal" class="font-mono text-white">-0.2px</span>
+            </div>
+            <input type="range" id="postcodeLetterSpacingSlider" min="-2" max="5" value="-0.2" step="0.1" oninput="updatePostcodeLetterSpacing(this.value)" class="w-full">
+          </div>
+        </div>
+
+        <!-- 3. Adresse (Ny dedikeret sektion) -->
+        <div class="space-y-2.5 bg-[#202020] p-3 rounded border border-neutral-800">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-white">Adresse</span>
+            <div class="flex gap-1 text-[10px]">
+              <button onclick="setAddressWeight('normal')" id="addressWeightNormal" class="px-2 py-0.5 rounded border border-white bg-white text-black font-bold">Normal</button>
+              <button onclick="setAddressWeight('bold')" id="addressWeightBold" class="px-2 py-0.5 rounded border border-neutral-700 bg-neutral-800 text-neutral-300">Fed</button>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-neutral-400">Skriftstørrelse</span>
+              <span id="addressFontSizeVal" class="font-mono text-white">13px</span>
+            </div>
+            <input type="range" id="addressFontSizeSlider" min="8" max="26" value="13" step="1" oninput="updateAddressFontSize(this.value)" class="w-full">
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-neutral-400">Kerning / Tracking</span>
+              <span id="addressLetterSpacingVal" class="font-mono text-white">-0.2px</span>
+            </div>
+            <input type="range" id="addressLetterSpacingSlider" min="-2" max="5" value="-0.2" step="0.1" oninput="updateAddressLetterSpacing(this.value)" class="w-full">
+          </div>
+        </div>
+
+        <!-- 4. Region Overskrifter -->
+        <div class="space-y-2.5 bg-[#202020] p-3 rounded border border-neutral-800">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-white">Region Overskrifter</span>
+            <div class="flex gap-1 text-[10px]">
+              <button onclick="setRegionWeight('normal')" id="regionWeightNormal" class="px-2 py-0.5 rounded border border-neutral-700 bg-neutral-800 text-neutral-300">Normal</button>
+              <button onclick="setRegionWeight('bold')" id="regionWeightBold" class="px-2 py-0.5 rounded border border-white bg-white text-black font-bold">Fed</button>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-neutral-400">Skriftstørrelse</span>
+              <span id="regionFontSizeVal" class="font-mono text-white">40px</span>
+            </div>
+            <input type="range" id="regionFontSizeSlider" min="20" max="70" value="40" step="1" oninput="updateRegionFontSize(this.value)" class="w-full">
+          </div>
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-neutral-400">Kerning / Tracking</span>
+              <span id="regionLetterSpacingVal" class="font-mono text-white">-1.2px</span>
+            </div>
+            <input type="range" id="regionLetterSpacingSlider" min="-4" max="6" value="-1.2" step="0.1" oninput="updateRegionLetterSpacing(this.value)" class="w-full">
+          </div>
+        </div>
+
+      </div>
+
+      <!-- TAB 4: DOCKING -->
+      <div id="tab-docking" class="p-3.5 space-y-3.5 hidden">
+        <div class="bg-[#202020] p-3 rounded border border-neutral-800 space-y-2.5">
+          <div class="flex justify-between items-center">
+            <span class="text-xs font-bold text-white">Postnummer Forankring</span>
+            <span class="text-[10px] text-neutral-400 uppercase">Satellit 1</span>
+          </div>
+          
+          <div class="grid grid-cols-4 gap-1 text-xs">
+            <button onclick="setDockSide('right')" id="dock-right" class="dock-btn py-1 border border-white bg-white text-black font-bold rounded">Højre</button>
+            <button onclick="setDockSide('left')" id="dock-left" class="dock-btn py-1 border border-neutral-700 bg-neutral-800 text-neutral-300 rounded">Venstre</button>
+            <button onclick="setDockSide('top')" id="dock-top" class="dock-btn py-1 border border-neutral-700 bg-neutral-800 text-neutral-300 rounded">Over</button>
+            <button onclick="setDockSide('bottom')" id="dock-bottom" class="dock-btn py-1 border border-neutral-700 bg-neutral-800 text-neutral-300 rounded">Under</button>
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-neutral-400">Finjustér Postnr. X-Offset</span>
+              <span id="postcodeOffsetXVal" class="font-mono text-white">-4px</span>
+            </div>
+            <input type="range" id="postcodeOffsetXSlider" min="-30" max="30" value="-4" step="1" oninput="updatePostcodeOffsetX(this.value)" class="w-full">
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-neutral-400">Finjustér Postnr. Y-Offset</span>
+              <span id="postcodeOffsetYVal" class="font-mono text-white">-5px</span>
+            </div>
+            <input type="range" id="postcodeOffsetYSlider" min="-30" max="30" value="-5" step="1" oninput="updatePostcodeOffsetY(this.value)" class="w-full">
+          </div>
+        </div>
+
+        <div class="bg-[#202020] p-3 rounded border border-neutral-800 space-y-2.5">
+          <div class="flex justify-between items-center">
+            <span class="text-xs font-bold text-white">Adresse Forankring</span>
+            <div class="flex items-center gap-1.5">
+              <span class="text-[10px] text-neutral-400">Aktivér</span>
+              <input type="checkbox" id="showAddressToggle" checked onchange="toggleShowAddress(this.checked)" class="w-3.5 h-3.5 accent-white">
+            </div>
+          </div>
+
+          <div>
+            <span class="text-[10px] text-neutral-400 block mb-1">Placering i forhold til biograf:</span>
+            <div class="grid grid-cols-3 gap-1 text-xs">
+              <button onclick="setAddressPosition('bottom')" id="addr-pos-bottom" class="addr-pos-btn py-1 border border-white bg-white text-black font-bold rounded">Under</button>
+              <button onclick="setAddressPosition('right')" id="addr-pos-right" class="addr-pos-btn py-1 border border-neutral-700 bg-neutral-800 text-neutral-300 rounded">I forlængelse</button>
+              <button onclick="setAddressPosition('top')" id="addr-pos-top" class="addr-pos-btn py-1 border border-neutral-700 bg-neutral-800 text-neutral-300 rounded">Over</button>
+            </div>
+          </div>
+
+          <div id="addrAlignSection">
+            <span class="text-[10px] text-neutral-400 block mb-1">Flugtning (Alignment med biograf):</span>
+            <div class="grid grid-cols-2 gap-1 text-xs">
+              <button onclick="setAddressAlign('left')" id="addr-align-left" class="addr-align-btn py-1 border border-white bg-white text-black font-bold rounded">
+                ⇥ Flugt Venstre
+              </button>
+              <button onclick="setAddressAlign('right')" id="addr-align-right" class="addr-align-btn py-1 border border-neutral-700 bg-neutral-800 text-neutral-300 rounded">
+                ⇤ Flugt Højre
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-neutral-400">Finjustér Adresse X-Offset</span>
+              <span id="addressOffsetXVal" class="font-mono text-white">0px</span>
+            </div>
+            <input type="range" id="addressOffsetXSlider" min="-40" max="40" value="0" step="1" oninput="updateAddressOffsetX(this.value)" class="w-full">
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-neutral-400">Finjustér Adresse Y-Offset</span>
+              <span id="addressOffsetYVal" class="font-mono text-white">2px</span>
+            </div>
+            <input type="range" id="addressOffsetYSlider" min="-30" max="30" value="2" step="1" oninput="updateAddressOffsetY(this.value)" class="w-full">
+          </div>
+        </div>
+
+        <div class="pt-1 flex justify-end">
+          <button onclick="toggleSwapBlocks()" class="text-[10px] px-2.5 py-1 rounded bg-neutral-800 border border-neutral-700 text-neutral-300 hover:text-white">
+            ⇄ Byt Postnr & Navn Rækkefølge
+          </button>
+        </div>
+      </div>
+
+      <!-- TAB 5: FARVER & BOKSE -->
+      <div id="tab-colors" class="p-3.5 space-y-3.5 hidden">
+        <div>
+          <h2 class="text-xs font-bold uppercase tracking-wider text-white mb-1.5">Boks Tilstand</h2>
+          <div class="grid grid-cols-3 gap-1.5">
+            <button onclick="setBoxMode('solid')" id="btn-box-solid" class="boxmode-btn text-xs py-1.5 border border-white bg-white text-black font-bold rounded">
+              Solid Boks
+            </button>
+            <button onclick="setBoxMode('none')" id="btn-box-none" class="boxmode-btn text-xs py-1.5 border border-neutral-700 bg-neutral-800 text-neutral-300 rounded">
+              Fjern Bokse
+            </button>
+            <button onclick="setBoxMode('outline')" id="btn-box-outline" class="boxmode-btn text-xs py-1.5 border border-neutral-700 bg-neutral-800 text-neutral-300 rounded">
+              Outline
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-2 bg-[#202020] p-3 rounded border border-neutral-800 text-xs">
+          <div class="flex items-center justify-between">
+            <span class="text-neutral-300">Canvas Baggrund</span>
+            <input type="color" id="colorCanvasBg" value="#555555" onchange="updateColors()" class="w-7 h-7 rounded border border-neutral-700 bg-transparent cursor-pointer">
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-neutral-300">Hovedboks Farve</span>
+            <input type="color" id="colorPrimaryBox" value="#000000" onchange="updateColors()" class="w-7 h-7 rounded border border-neutral-700 bg-transparent cursor-pointer">
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-neutral-300">Satellitboks Farve</span>
+            <input type="color" id="colorSecondaryBox" value="#000000" onchange="updateColors()" class="w-7 h-7 rounded border border-neutral-700 bg-transparent cursor-pointer">
+          </div>
+          <div class="flex items-center justify-between pt-2 border-t border-neutral-800">
+            <span class="text-neutral-300">Biograf & Region Tekst</span>
+            <input type="color" id="colorTextPrimary" value="#ffffff" onchange="updateColors()" class="w-7 h-7 rounded border border-neutral-700 bg-transparent cursor-pointer">
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-neutral-300">Postnummer & Adresse Tekst</span>
+            <input type="color" id="colorTextSecondary" value="#ffffff" onchange="updateColors()" class="w-7 h-7 rounded border border-neutral-700 bg-transparent cursor-pointer">
+          </div>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- RIGHT: Tour Poster Canvas -->
+    <main class="flex-1 bg-[#0d0d0d] flex items-start justify-center p-6 lg:p-10 overflow-x-auto overflow-y-auto min-h-screen">
+      <div id="posterWrapper" class="transition-transform origin-top">
+        <div id="posterCanvas" class="poster-canvas bg-[#555555] p-8 md:p-10 relative flex flex-col justify-start"></div>
+      </div>
+    </main>
+
+  </div>
+
+  <script>
+    const DEFAULT_DATASET = [
+      { id: 1, region: "København", name: "Vue København", postal: "1560", address: "Kalvebod Brygge 57" },
+      { id: 2, region: "København", name: "NFB Dagmar", postal: "1608", address: "Jernbanegade 2" },
+      { id: 3, region: "København", name: "NFB Palads", postal: "1609", address: "Axeltorv 9" },
+      { id: 4, region: "København", name: "Reservoir KBH", postal: "1799", address: "Bryggernes Plads 10" },
+      { id: 5, region: "København", name: "NFB Falkoner", postal: "2000", address: "Sylows Allé 15" },
+      { id: 6, region: "København", name: "Big Bio Nordhavn", postal: "2150", address: "Hamborg Plads 6" },
+      { id: 7, region: "København", name: "Empire Bio", postal: "2200", address: "Guldbergsgade 29F" },
+      { id: 8, region: "København", name: "NFB Fields", postal: "2300", address: "Arne Jacobsens Allé 12" },
+
+      { id: 9, region: "Sjælland og øer", name: "Atlas Biograferne Rødovre", postal: "2610", address: "Rødovre Centrum 96" },
+      { id: 10, region: "Sjælland og øer", name: "NFB Taastrup", postal: "2630", address: "Cityringen 4, City2" },
+      { id: 11, region: "Sjælland og øer", name: "NFB Waves", postal: "2670", address: "Over Bølgen 20" },
+      { id: 12, region: "Sjælland og øer", name: "Big Bio Herlev", postal: "2730", address: "Herlev Hovedgade 31" },
+      { id: 13, region: "Sjælland og øer", name: "NFB Lyngby", postal: "2800", address: "Klampenborgvej 215A" },
+      { id: 14, region: "Sjælland og øer", name: "Moviehouse Hellerup", postal: "2900", address: "Tuborg Boulevard 10" },
+      { id: 15, region: "Sjælland og øer", name: "Moviehouse Helsingør", postal: "3000", address: "Rønnebær Allé 110A" },
+      { id: 16, region: "Sjælland og øer", name: "NFB Hillerød", postal: "3400", address: "Gallerierne 1" },
+      { id: 17, region: "Sjælland og øer", name: "NFB Frederikssund", postal: "3600", address: "Nygade 1" },
+      { id: 18, region: "Sjælland og øer", name: "Kino Ros Torv Roskilde", postal: "4000", address: "Ros Torv 1, 1. sal, 45" },
+      { id: 19, region: "Sjælland og øer", name: "Moviehouse Slagelse", postal: "4200", address: "Træskogården 2" },
+      { id: 20, region: "Sjælland og øer", name: "NFB Køge", postal: "4600", address: "Antoniestræde 6" },
+      { id: 21, region: "Sjælland og øer", name: "NFB Næstved", postal: "4700", address: "Fabriksvej 1" },
+      { id: 22, region: "Sjælland og øer", name: "NFB Nykøbing F", postal: "4800", address: "Slotsbryggen 5" },
+
+      { id: 23, region: "Fyn", name: "NFB Odense", postal: "5000", address: "Østre Stationsvej 27, 2. sal" },
+      { id: 24, region: "Fyn", name: "Vue Rosengård", postal: "5220", address: "Ørbækvej 75, Rosengårdcentret 250" },
+      { id: 25, region: "Fyn", name: "Scala Svendborg", postal: "5700", address: "Centrumpladsen 2" },
+
+      { id: 26, region: "Jylland", name: "NFB Kolding", postal: "6000", address: "Skovvangen 42, Kolding Storcenter" },
+      { id: 27, region: "Jylland", name: "Kosmorama Haderslev", postal: "6100", address: "Jomfrustien 34" },
+      { id: 28, region: "Jylland", name: "NFB Esbjerg", postal: "6700", address: "Exnersgade 20" },
+      { id: 29, region: "Jylland", name: "Panorama Biograferne Fredericia", postal: "7000", address: "Prinsessegade 55" },
+      { id: 30, region: "Jylland", name: "Lido Biograferne Vejle", postal: "7100", address: "Søndertorv 1" },
+      { id: 31, region: "Jylland", name: "NFB Herning", postal: "7400", address: "Sølvgade 20" },
+      { id: 32, region: "Jylland", name: "Big Bio Holstebro", postal: "7500", address: "Enghaven 17" },
+      { id: 33, region: "Jylland", name: "Kino Thisted", postal: "7700", address: "Håndværkertorv 9 11" },
+      { id: 34, region: "Jylland", name: "NFB Biocity Århus", postal: "8000", address: "Skt. Knuds Torv 15" },
+      { id: 35, region: "Jylland", name: "Vue Bruuns Galleri", postal: "8000", address: "M.P. Bruunsgade 25" },
+      { id: 36, region: "Jylland", name: "NFB Trøjborg", postal: "8200", address: "Tordenskjoldsgade 21" },
+      { id: 37, region: "Jylland", name: "Bio Silkeborg", postal: "8600", address: "Papirfabrikken 10" },
+      { id: 38, region: "Jylland", name: "MegaScope Horsens", postal: "8700", address: "Holmboes Allé 13B" },
+      { id: 39, region: "Jylland", name: "NFB Viborg", postal: "8800", address: "Tingvej 22" },
+      { id: 40, region: "Jylland", name: "NFB Randers", postal: "8900", address: "Thors Bakke 2" },
+      { id: 41, region: "Jylland", name: "NFB Aalborg Kennedy", postal: "9000", address: "John F. Kennedys Plads 1" },
+      { id: 42, region: "Jylland", name: "NFB Aalborg City Syd", postal: "9200", address: "Vandmanden 5B" }
+    ];
+
+    let cinemas = JSON.parse(JSON.stringify(DEFAULT_DATASET));
+    let activeRegionFilter = 'ALL';
+
+    let state = {
+      layoutMode: 'cluster',
+      boxMode: 'solid',
+      gapX: 0,
+      gapY: 0,
+      linkedGaps: false,
+      clusterDrift: 0,
+      globalScale: 1.0,
+      autoFill: true,
+      regionMarginBottom: 35,
+
+      // Typography sizes, tracking & weights
+      venueFontSize: 22,
+      venueLetterSpacing: -0.5,
+      venueFontWeight: 'bold',
+
+      postcodeFontSize: 16,
+      postcodeLetterSpacing: -0.2,
+      postcodeFontWeight: 'normal',
+
+      addressFontSize: 13,
+      addressLetterSpacing: -0.2,
+      addressFontWeight: 'normal',
+
+      regionFontSize: 40,
+      regionLetterSpacing: -1.2,
+      regionFontWeight: 'bold',
+
+      // Docking
+      dockSide: 'right',
+      postcodeOffsetX: -4,
+      postcodeOffsetY: -5,
+
+      showAddress: true,
+      addressPosition: 'bottom',
+      addressAlign: 'left',
+      addressOffsetX: 0,
+      addressOffsetY: 2,
+
+      swapBlocks: false,
+
+      colorCanvasBg: '#555555',
+      colorPrimaryBox: '#000000',
+      colorSecondaryBox: '#000000',
+      colorTextPrimary: '#ffffff',
+      colorTextSecondary: '#ffffff',
+
+      seed: 42
+    };
+
+    function seededRandom(seed) {
+      let x = Math.sin(seed++) * 10000;
+      return x - Math.floor(x);
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      renderCinemaCards();
+      renderPoster();
+    });
+
+    function switchTab(tabName) {
+      ['data', 'layout', 'typography', 'docking', 'colors'].forEach(tab => {
+        document.getElementById(`tab-${tab}`).classList.add('hidden');
+        document.getElementById(`tabBtn-${tab}`).classList.remove('active', 'text-white');
+        document.getElementById(`tabBtn-${tab}`).classList.add('text-neutral-400');
+      });
+      document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+      const activeBtn = document.getElementById(`tabBtn-${tabName}`);
+      activeBtn.classList.add('active', 'text-white');
+      activeBtn.classList.remove('text-neutral-400');
+    }
+
+    function filterRegionTab(region) {
+      activeRegionFilter = region;
+      document.querySelectorAll('.region-filter-btn').forEach(btn => {
+        btn.classList.remove('bg-white', 'text-black', 'font-bold');
+        btn.classList.add('bg-neutral-800', 'text-neutral-300');
+      });
+      const activeBtn = document.getElementById(`filter-${region}`);
+      if (activeBtn) {
+        activeBtn.classList.add('bg-white', 'text-black', 'font-bold');
+        activeBtn.classList.remove('bg-neutral-800', 'text-neutral-300');
+      }
+      renderCinemaCards();
+    }
+
+    function renderCinemaCards() {
+      const container = document.getElementById('cinemaCardsList');
+      document.getElementById('totalVenueCount').innerText = cinemas.length;
+
+      const filtered = activeRegionFilter === 'ALL' 
+        ? cinemas 
+        : cinemas.filter(c => c.region === activeRegionFilter);
+
+      container.innerHTML = '';
+
+      filtered.forEach((cinema) => {
+        const card = document.createElement('div');
+        card.className = "cinema-card bg-[#222] p-2.5 rounded border border-neutral-700/70 space-y-1.5";
+        
+        card.innerHTML = `
+          <div class="flex items-center justify-between text-[10px] pb-1 border-b border-neutral-700/60">
+            <span class="font-bold text-neutral-400 uppercase tracking-wider">${cinema.region}</span>
+            <button onclick="removeCinema(${cinema.id})" class="text-neutral-500 hover:text-red-400 text-xs" title="Slet">✕</button>
+          </div>
+          
+          <div class="grid grid-cols-12 gap-1.5">
+            <div class="col-span-8">
+              <label class="block text-[9px] text-neutral-400 font-medium">Biografnavn</label>
+              <input type="text" value="${escapeHtml(cinema.name)}" 
+                oninput="updateCinemaField(${cinema.id}, 'name', this.value)"
+                class="w-full bg-[#161616] text-white border border-neutral-700 rounded px-2 py-0.5 text-xs font-bold focus:border-white focus:outline-none">
+            </div>
+
+            <div class="col-span-4">
+              <label class="block text-[9px] text-neutral-400 font-medium">Postnr.</label>
+              <input type="text" value="${escapeHtml(cinema.postal)}" 
+                oninput="updateCinemaField(${cinema.id}, 'postal', this.value)"
+                class="w-full bg-[#161616] text-white border border-neutral-700 rounded px-2 py-0.5 text-xs focus:border-white focus:outline-none">
+            </div>
+
+            <div class="col-span-8">
+              <label class="block text-[9px] text-neutral-400 font-medium">Adresse</label>
+              <input type="text" value="${escapeHtml(cinema.address)}" 
+                oninput="updateCinemaField(${cinema.id}, 'address', this.value)"
+                class="w-full bg-[#161616] text-neutral-300 border border-neutral-700 rounded px-2 py-0.5 text-xs focus:border-white focus:outline-none">
+            </div>
+
+            <div class="col-span-4">
+              <label class="block text-[9px] text-neutral-400 font-medium">Område</label>
+              <select onchange="updateCinemaField(${cinema.id}, 'region', this.value)"
+                class="w-full bg-[#161616] text-neutral-300 border border-neutral-700 rounded px-1 py-0.5 text-xs focus:border-white focus:outline-none">
+                <option value="København" ${cinema.region === 'København' ? 'selected' : ''}>København</option>
+                <option value="Sjælland og øer" ${cinema.region === 'Sjælland og øer' ? 'selected' : ''}>Sjælland</option>
+                <option value="Fyn" ${cinema.region === 'Fyn' ? 'selected' : ''}>Fyn</option>
+                <option value="Jylland" ${cinema.region === 'Jylland' ? 'selected' : ''}>Jylland</option>
+              </select>
+            </div>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    function escapeHtml(string) {
+      return String(string).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function updateCinemaField(id, field, value) {
+      const item = cinemas.find(c => c.id === id);
+      if (item) {
+        item[field] = value;
+        renderPoster();
+      }
+    }
+
+    function removeCinema(id) {
+      cinemas = cinemas.filter(c => c.id !== id);
+      renderCinemaCards();
+      renderPoster();
+    }
+
+    function addNewCinemaCard() {
+      const newId = Date.now();
+      const region = activeRegionFilter === 'ALL' ? 'København' : activeRegionFilter;
+      cinemas.unshift({
+        id: newId,
+        region: region,
+        name: "Ny Biograf",
+        postal: "1000",
+        address: "Gadenavn 1"
+      });
+      renderCinemaCards();
+      renderPoster();
+    }
+
+    function resetToCleanDataset() {
+      cinemas = JSON.parse(JSON.stringify(DEFAULT_DATASET));
+      renderCinemaCards();
+      renderPoster();
+    }
+
+    // MAIN POSTER RENDER
+    function renderPoster() {
+      const canvas = document.getElementById('posterCanvas');
+      canvas.style.backgroundColor = state.colorCanvasBg;
+      canvas.innerHTML = '';
+
+      const regionsOrder = ["København", "Sjælland og øer", "Fyn", "Jylland"];
+      const grouped = {};
+      regionsOrder.forEach(r => grouped[r] = []);
+
+      cinemas.forEach(item => {
+        if (!grouped[item.region]) grouped[item.region] = [];
+        grouped[item.region].push(item);
+      });
+
+      let currentSeed = state.seed;
+
+      regionsOrder.forEach((regionName) => {
+        const list = grouped[regionName];
+        if (!list || list.length === 0) return;
+
+        const regionSection = document.createElement('div');
+        regionSection.className = "region-section flex flex-col w-full";
+        regionSection.style.marginBottom = `${state.regionMarginBottom * state.globalScale}px`;
+
+        // Headline
+        const headlineWrap = document.createElement('div');
+        headlineWrap.className = "flex items-center mb-1 z-10";
+
+        const headlineBox = document.createElement('div');
+        headlineBox.style.padding = `${5 * state.globalScale}px ${10 * state.globalScale}px`;
+        applyBoxStyling(headlineBox, state.colorPrimaryBox);
+
+        const headlineText = document.createElement('span');
+        headlineText.innerText = regionName;
+        headlineText.style.fontSize = `${state.regionFontSize * state.globalScale}px`;
+        headlineText.style.fontWeight = state.regionFontWeight;
+        headlineText.style.letterSpacing = `${state.regionLetterSpacing}px`;
+        headlineText.style.color = state.colorTextPrimary;
+        headlineText.style.lineHeight = "1";
+        headlineText.style.display = "inline-block";
+
+        headlineBox.appendChild(headlineText);
+        headlineWrap.appendChild(headlineBox);
+        regionSection.appendChild(headlineWrap);
+
+        // Venues Wrapper
+        const venuesContainer = document.createElement('div');
+        venuesContainer.className = "venues-container flex flex-wrap items-start";
+        
+        if (state.autoFill) {
+          venuesContainer.style.width = "100%";
+          venuesContainer.style.justifyContent = state.layoutMode === 'grid' ? 'space-between' : 'flex-start';
+        }
+
+        venuesContainer.style.columnGap = `${Math.max(0, state.gapX) * state.globalScale}px`;
+        venuesContainer.style.rowGap = `${Math.max(0, state.gapY) * state.globalScale}px`;
+
+        list.forEach((cinema) => {
+          const setUnit = document.createElement('div');
+          setUnit.className = "cinema-set-unit inline-flex flex-col relative select-none shrink-0";
+
+          if (state.gapY < 0) {
+            setUnit.style.marginTop = `${state.gapY * state.globalScale}px`;
+          }
+          if (state.gapX < 0) {
+            setUnit.style.marginRight = `${state.gapX * state.globalScale}px`;
+          }
+
+          if (state.layoutMode === 'cluster' && state.clusterDrift > 0) {
+            const randOffset = (seededRandom(currentSeed++) - 0.5) * 2 * state.clusterDrift * state.globalScale;
+            setUnit.style.transform = `translateX(${randOffset.toFixed(1)}px)`;
+          } else {
+            setUnit.style.transform = "none";
+          }
+
+          // Main horizontal row: Venue name + Postal code
+          const mainRow = document.createElement('div');
+          mainRow.className = "main-row inline-flex items-center relative z-10";
+
+          // Cinema Name Block
+          const nameBox = document.createElement('div');
+          nameBox.className = "name-box inline-flex items-center z-10";
+          nameBox.style.padding = `${4 * state.globalScale}px ${8 * state.globalScale}px`;
+          applyBoxStyling(nameBox, state.colorPrimaryBox);
+
+          const nameText = document.createElement('span');
+          nameText.innerText = cinema.name;
+          nameText.style.fontSize = `${state.venueFontSize * state.globalScale}px`;
+          nameText.style.fontWeight = state.venueFontWeight;
+          nameText.style.letterSpacing = `${state.venueLetterSpacing}px`;
+          nameText.style.color = state.colorTextPrimary;
+          nameText.style.lineHeight = "1.05";
+          nameText.style.whiteSpace = "nowrap";
+
+          nameBox.appendChild(nameText);
+
+          // Postal Code Block
+          const postalBox = document.createElement('div');
+          postalBox.className = "postal-box inline-flex items-center z-0";
+          postalBox.style.padding = `${3 * state.globalScale}px ${7 * state.globalScale}px`;
+          applyBoxStyling(postalBox, state.colorSecondaryBox);
+
+          const pOffX = state.postcodeOffsetX * state.globalScale;
+          const pOffY = state.postcodeOffsetY * state.globalScale;
+
+          if (state.dockSide === 'right') {
+            postalBox.style.marginLeft = `${pOffX}px`;
+            postalBox.style.transform = `translateY(${pOffY}px)`;
+          } else if (state.dockSide === 'left') {
+            postalBox.style.marginRight = `${pOffX}px`;
+            postalBox.style.transform = `translateY(${pOffY}px)`;
+          } else if (state.dockSide === 'top') {
+            postalBox.style.transform = `translate(${pOffX}px, ${-16 * state.globalScale + pOffY}px)`;
+          } else if (state.dockSide === 'bottom') {
+            postalBox.style.transform = `translate(${pOffX}px, ${16 * state.globalScale + pOffY}px)`;
+          }
+
+          const postalText = document.createElement('span');
+          postalText.innerText = `(${cinema.postal})`;
+          postalText.style.fontSize = `${state.postcodeFontSize * state.globalScale}px`;
+          postalText.style.fontWeight = state.postcodeFontWeight;
+          postalText.style.letterSpacing = `${state.postcodeLetterSpacing}px`;
+          postalText.style.color = state.colorTextSecondary;
+          postalText.style.lineHeight = "1";
+          postalText.style.whiteSpace = "nowrap";
+
+          postalBox.appendChild(postalText);
+
+          if (state.swapBlocks) {
+            mainRow.appendChild(postalBox);
+            mainRow.appendChild(nameBox);
+          } else {
+            mainRow.appendChild(nameBox);
+            mainRow.appendChild(postalBox);
+          }
+
+          // Build Address Block
+          let addrBox = null;
+          if (state.showAddress && cinema.address) {
+            addrBox = document.createElement('div');
+            addrBox.className = "address-box inline-flex items-center z-0";
+            addrBox.style.padding = `${2.5 * state.globalScale}px ${6 * state.globalScale}px`;
+            applyBoxStyling(addrBox, state.colorSecondaryBox);
+
+            const aOffX = state.addressOffsetX * state.globalScale;
+            const aOffY = state.addressOffsetY * state.globalScale;
+
+            const addrText = document.createElement('span');
+            addrText.innerText = cinema.address;
+            addrText.style.fontSize = `${state.addressFontSize * state.globalScale}px`;
+            addrText.style.fontWeight = state.addressFontWeight;
+            addrText.style.letterSpacing = `${state.addressLetterSpacing}px`;
+            addrText.style.color = state.colorTextSecondary;
+            addrText.style.lineHeight = "1";
+            addrText.style.whiteSpace = "nowrap";
+
+            addrBox.appendChild(addrText);
+
+            if (state.addressPosition === 'right') {
+              addrBox.style.marginLeft = `${(4 + aOffX)}px`;
+              addrBox.style.transform = `translateY(${aOffY}px)`;
+              mainRow.appendChild(addrBox);
+              setUnit.appendChild(mainRow);
+            } else {
+              const alignRow = document.createElement('div');
+              alignRow.className = "w-full flex relative z-0";
+              alignRow.style.justifyContent = state.addressAlign === 'left' ? 'flex-start' : 'flex-end';
+              
+              addrBox.style.transform = `translate(${aOffX}px, ${aOffY}px)`;
+              alignRow.appendChild(addrBox);
+
+              if (state.addressPosition === 'top') {
+                setUnit.appendChild(alignRow);
+                setUnit.appendChild(mainRow);
+              } else {
+                setUnit.appendChild(mainRow);
+                setUnit.appendChild(alignRow);
+              }
+            }
+          } else {
+            setUnit.appendChild(mainRow);
+          }
+
+          venuesContainer.appendChild(setUnit);
+        });
+
+        regionSection.appendChild(venuesContainer);
+        canvas.appendChild(regionSection);
+      });
+    }
+
+    function applyBoxStyling(element, bgColor) {
+      if (state.boxMode === 'solid') {
+        element.style.backgroundColor = bgColor;
+        element.style.border = "none";
+      } else if (state.boxMode === 'none') {
+        element.style.backgroundColor = "transparent";
+        element.style.border = "none";
+      } else if (state.boxMode === 'outline') {
+        element.style.backgroundColor = "transparent";
+        element.style.border = `1.5px solid ${bgColor === '#000000' ? '#ffffff' : bgColor}`;
+      }
+    }
+
+    function updateGapX(val) {
+      state.gapX = parseInt(val);
+      document.getElementById('gapXVal').innerText = `${val}px`;
+      if (state.linkedGaps) {
+        state.gapY = parseInt(val);
+        document.getElementById('gapYSlider').value = val;
+        document.getElementById('gapYVal').innerText = `${val}px`;
+      }
+      renderPoster();
+    }
+
+    function updateGapY(val) {
+      state.gapY = parseInt(val);
+      document.getElementById('gapYVal').innerText = `${val}px`;
+      if (state.linkedGaps) {
+        state.gapX = parseInt(val);
+        document.getElementById('gapXSlider').value = val;
+        document.getElementById('gapXVal').innerText = `${val}px`;
+      }
+      renderPoster();
+    }
+
+    function toggleLinkedGap() {
+      state.linkedGaps = !state.linkedGaps;
+      const btn = document.getElementById('linkGapBtn');
+      if (state.linkedGaps) {
+        btn.innerText = "🔗 Ensartet (Lænket)";
+        btn.classList.remove('bg-neutral-800');
+        btn.classList.add('bg-neutral-700', 'text-white');
+        updateGapX(document.getElementById('gapXSlider').value);
+      } else {
+        btn.innerText = "⚲ Uafhængig";
+        btn.classList.remove('bg-neutral-700', 'text-white');
+        btn.classList.add('bg-neutral-800', 'text-neutral-300');
+      }
+    }
+
+    function updateClusterDrift(val) {
+      state.clusterDrift = parseInt(val);
+      document.getElementById('clusterDriftVal').innerText = `${val}px`;
+      renderPoster();
+    }
+
+    function updateGlobalScale(val) {
+      state.globalScale = parseInt(val) / 100;
+      document.getElementById('globalScaleVal').innerText = `${val}%`;
+      renderPoster();
+    }
+
+    function toggleAutoFill(checked) {
+      state.autoFill = checked;
+      renderPoster();
+    }
+
+    function updateRegionMargin(val) {
+      state.regionMarginBottom = parseInt(val);
+      document.getElementById('regionMarginVal').innerText = `${val}px`;
+      renderPoster();
+    }
+
+    // TYPOGRAPHY HANDLERS
+    function updateVenueFontSize(val) {
+      state.venueFontSize = parseInt(val);
+      document.getElementById('venueFontSizeVal').innerText = `${val}px`;
+      renderPoster();
+    }
+
+    function updateVenueLetterSpacing(val) {
+      state.venueLetterSpacing = parseFloat(val);
+      document.getElementById('venueLetterSpacingVal').innerText = `${val}px`;
+      renderPoster();
+    }
+
+    function setVenueWeight(weight) {
+      state.venueFontWeight = weight;
+      updateWeightButtonUI('venueWeight', weight);
+      renderPoster();
+    }
+
+    function updatePostcodeFontSize(val) {
+      state.postcodeFontSize = parseInt(val);
+      document.getElementById('postcodeFontSizeVal').innerText = `${val}px`;
+      renderPoster();
+    }
+
+    function updatePostcodeLetterSpacing(val) {
+      state.postcodeLetterSpacing = parseFloat(val);
+      document.getElementById('postcodeLetterSpacingVal').innerText = `${val}px`;
+      renderPoster();
+    }
+
+    function setPostcodeWeight(weight) {
+      state.postcodeFontWeight = weight;
+      updateWeightButtonUI('postcodeWeight', weight);
+      renderPoster();
+    }
+
+    function updateAddressFontSize(val) {
+      state.addressFontSize = parseInt(val);
+      document.getElementById('addressFontSizeVal').innerText = `${val}px`;
+      renderPoster();
+    }
+
+    function updateAddressLetterSpacing(val) {
+      state.addressLetterSpacing = parseFloat(val);
+      document.getElementById('addressLetterSpacingVal').innerText = `${val}px`;
+      renderPoster();
+    }
+
+    function setAddressWeight(weight) {
+      state.addressFontWeight = weight;
+      updateWeightButtonUI('addressWeight', weight);
+      renderPoster();
+    }
+
+    function updateRegionFontSize(val) {
+      state.regionFontSize = parseInt(val);
+      document.getElementById('regionFontSizeVal').innerText = `${val}px`;
+      renderPoster();
+    }
+
+    function updateRegionLetterSpacing(val) {
+      state.regionLetterSpacing = parseFloat(val);
+      document.getElementById('regionLetterSpacingVal').innerText = `${val}px`;
+      renderPoster();
+    }
+
+    function setRegionWeight(weight) {
+      state.regionFontWeight = weight;
+      updateWeightButtonUI('regionWeight', weight);
+      renderPoster();
+    }
+
+    function updateWeightButtonUI(prefix, weight) {
+      const normalBtn = document.getElementById(`${prefix}Normal`);
+      const boldBtn = document.getElementById(`${prefix}Bold`);
+      if (weight === 'bold') {
+        boldBtn.className = "px-2 py-0.5 rounded border border-white bg-white text-black font-bold";
+        normalBtn.className = "px-2 py-0.5 rounded border border-neutral-700 bg-neutral-800 text-neutral-300";
+      } else {
+        normalBtn.className = "px-2 py-0.5 rounded border border-white bg-white text-black font-bold";
+        boldBtn.className = "px-2 py-0.5 rounded border border-neutral-700 bg-neutral-800 text-neutral-300";
+      }
+    }
+
+    // DOCKING HANDLERS
+    function setDockSide(side) {
+      state.dockSide = side;
+      ['right', 'left', 'top', 'bottom'].forEach(s => {
+        const btn = document.getElementById(`dock-${s}`);
+        btn.className = "dock-btn py-1 border border-neutral-700 bg-neutral-800 text-neutral-300 rounded";
+      });
+      const active = document.getElementById(`dock-${side}`);
+      active.className = "dock-btn py-1 border border-white bg-white text-black font-bold rounded";
+      renderPoster();
+    }
+
+    function updatePostcodeOffsetX(val) {
+      state.postcodeOffsetX = parseInt(val);
+      document.getElementById('postcodeOffsetXVal').innerText = `${val}px`;
+      renderPoster();
+    }
+
+    function updatePostcodeOffsetY(val) {
+      state.postcodeOffsetY = parseInt(val);
+      document.getElementById('postcodeOffsetYVal').innerText = `${val}px`;
+      renderPoster();
+    }
+
+    function setAddressPosition(pos) {
+      state.addressPosition = pos;
+      ['bottom', 'right', 'top'].forEach(p => {
+        const btn = document.getElementById(`addr-pos-${p}`);
+        btn.className = "addr-pos-btn py-1 border border-neutral-700 bg-neutral-800 text-neutral-300 rounded";
+      });
+      const active = document.getElementById(`addr-pos-${pos}`);
+      active.className = "addr-pos-btn py-1 border border-white bg-white text-black font-bold rounded";
+
+      document.getElementById('addrAlignSection').style.display = (pos === 'right') ? 'none' : 'block';
+      renderPoster();
+    }
+
+    function setAddressAlign(align) {
+      state.addressAlign = align;
+      ['left', 'right'].forEach(a => {
+        const btn = document.getElementById(`addr-align-${a}`);
+        btn.className = "addr-align-btn py-1 border border-neutral-700 bg-neutral-800 text-neutral-300 rounded";
+      });
+      const active = document.getElementById(`addr-align-${align}`);
+      active.className = "addr-align-btn py-1 border border-white bg-white text-black font-bold rounded";
+      renderPoster();
+    }
+
+    function updateAddressOffsetX(val) {
+      state.addressOffsetX = parseInt(val);
+      document.getElementById('addressOffsetXVal').innerText = `${val}px`;
+      renderPoster();
+    }
+
+    function updateAddressOffsetY(val) {
+      state.addressOffsetY = parseInt(val);
+      document.getElementById('addressOffsetYVal').innerText = `${val}px`;
+      renderPoster();
+    }
+
+    function toggleShowAddress(checked) {
+      state.showAddress = checked;
+      renderPoster();
+    }
+
+    function toggleSwapBlocks() {
+      state.swapBlocks = !state.swapBlocks;
+      renderPoster();
+    }
+
+    function setLayoutMode(mode) {
+      state.layoutMode = mode;
+      ['cluster', 'strip', 'grid'].forEach(m => {
+        const btn = document.getElementById(`btn-mode-${m}`);
+        btn.className = "layout-btn text-xs py-1.5 border border-neutral-700 bg-neutral-800 text-neutral-300 rounded text-center";
+      });
+      const active = document.getElementById(`btn-mode-${mode}`);
+      active.className = "layout-btn text-xs py-1.5 border border-white bg-white text-black font-bold rounded text-center";
+      renderPoster();
+    }
+
+    function setBoxMode(mode) {
+      state.boxMode = mode;
+      ['solid', 'none', 'outline'].forEach(m => {
+        const btn = document.getElementById(`btn-box-${m}`);
+        btn.className = "boxmode-btn text-xs py-1.5 border border-neutral-700 bg-neutral-800 text-neutral-300 rounded text-center";
+      });
+      const active = document.getElementById(`btn-box-${mode}`);
+      active.className = "boxmode-btn text-xs py-1.5 border border-white bg-white text-black font-bold rounded text-center";
+      renderPoster();
+    }
+
+    function updateColors() {
+      state.colorCanvasBg = document.getElementById('colorCanvasBg').value;
+      state.colorPrimaryBox = document.getElementById('colorPrimaryBox').value;
+      state.colorSecondaryBox = document.getElementById('colorSecondaryBox').value;
+      state.colorTextPrimary = document.getElementById('colorTextPrimary').value;
+      state.colorTextSecondary = document.getElementById('colorTextSecondary').value;
+      renderPoster();
+    }
+
+    function rollClusterSeed() {
+      state.seed = Math.floor(Math.random() * 99999);
+      renderPoster();
+    }
+
+    function setZoom(scale) {
+      document.getElementById('posterWrapper').style.transform = `scale(${scale})`;
+    }
+
+    // GENERER TEKNISK REN VEKTOR-SVG STRENG
+    function buildVectorSvgString() {
+      const canvas = document.getElementById('posterCanvas');
+      const w = canvas.offsetWidth;
+      const h = canvas.offsetHeight;
+      const canvasRect = canvas.getBoundingClientRect();
+
+      let svgElements = '';
+      svgElements += `<rect width="100%" height="100%" fill="${state.colorCanvasBg}" />\n`;
+
+      const regionSections = canvas.querySelectorAll('.region-section');
+      regionSections.forEach(sec => {
+        const boxes = sec.querySelectorAll('.name-box, .postal-box, .address-box, div:has(> span[style*="font-size"])');
+        boxes.forEach(box => {
+          const r = box.getBoundingClientRect();
+          const x = r.left - canvasRect.left;
+          const y = r.top - canvasRect.top;
+          const width = r.width;
+          const height = r.height;
+
+          const span = box.querySelector('span');
+          if (!span) return;
+
+          const isPrimary = box.classList.contains('name-box') || box.parentElement.classList.contains('z-10');
+          const boxBg = isPrimary ? state.colorPrimaryBox : state.colorSecondaryBox;
+          const textColor = isPrimary ? state.colorTextPrimary : state.colorTextSecondary;
+          const text = span.innerText;
+          const fontSize = parseFloat(window.getComputedStyle(span).fontSize);
+          const letterSpacing = parseFloat(window.getComputedStyle(span).letterSpacing) || 0;
+          const fontWeight = window.getComputedStyle(span).fontWeight;
+
+          if (state.boxMode === 'solid') {
+            svgElements += `  <rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${width.toFixed(2)}" height="${height.toFixed(2)}" fill="${boxBg}" />\n`;
+          } else if (state.boxMode === 'outline') {
+            svgElements += `  <rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${width.toFixed(2)}" height="${height.toFixed(2)}" fill="none" stroke="${boxBg === '#000000' ? '#ffffff' : boxBg}" stroke-width="1.5" />\n`;
+          }
+
+          const textY = y + (height * 0.73);
+          svgElements += `  <text x="${(x + 5).toFixed(2)}" y="${textY.toFixed(2)}" font-family="Arial, Helvetica, sans-serif" font-size="${fontSize.toFixed(2)}px" font-weight="${fontWeight}" letter-spacing="${letterSpacing.toFixed(2)}px" fill="${textColor}">${escapeSvg(text)}</text>\n`;
+        });
+      });
+
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+  <style>
+    text { font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; }
+  </style>
+${svgElements}
+</svg>`;
+    }
+
+    function escapeSvg(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+    }
+
+    function exportCleanVectorSVG() {
+      const fullSvg = buildVectorSvgString();
+      const blob = new Blob([fullSvg], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `tour-poster-${Date.now()}.svg`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportPNG() {
+      const btn = document.getElementById('pngExportBtn');
+      const originalText = btn.innerText;
+      btn.innerText = "Genererer...";
+      btn.disabled = true;
+
+      const canvasElement = document.getElementById('posterCanvas');
+      const w = canvasElement.offsetWidth;
+      const h = canvasElement.offsetHeight;
+      const scaleFactor = 2;
+
+      const svgString = buildVectorSvgString();
+      const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+
+      img.onload = function () {
+        const exportCanvas = document.createElement('canvas');
+        exportCanvas.width = w * scaleFactor;
+        exportCanvas.height = h * scaleFactor;
+        const ctx = exportCanvas.getContext('2d');
+        ctx.scale(scaleFactor, scaleFactor);
+
+        ctx.drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(url);
+
+        try {
+          const pngUrl = exportCanvas.toDataURL('image/png');
+          const a = document.createElement('a');
+          a.download = `tour-poster-${Date.now()}.png`;
+          a.href = pngUrl;
+          a.click();
+        } catch (err) {
+          console.error("Fejl under eksport af PNG:", err);
+          alert("Kunne ikke eksportere PNG direkte. Brug SVG-eksporten i stedet.");
+        } finally {
+          btn.innerText = originalText;
+          btn.disabled = false;
+        }
+      };
+
+      img.onerror = function (e) {
+        console.error("Kunne ikke indlæse SVG til PNG-rendering", e);
+        URL.revokeObjectURL(url);
+        btn.innerText = originalText;
+        btn.disabled = false;
+        alert("Der opstod en fejl under PNG-genereringen.");
+      };
+
+      img.src = url;
+    }
+  </script>
+</body>
+</html>
