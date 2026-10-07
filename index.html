@@ -73,6 +73,21 @@
     <!-- LEFT: Sidebar Navigation & Controls -->
     <aside class="w-full lg:w-[460px] bg-[#161616] border-r border-neutral-800 flex flex-col shrink-0 lg:max-h-[calc(100vh-45px)] overflow-y-auto">
       
+      <!-- Visibility Bar (On / Off Controls) -->
+      <div class="p-3 bg-[#1c1c1c] border-b border-neutral-800 flex items-center justify-between text-xs">
+        <span class="font-bold text-neutral-300 uppercase tracking-wider text-[10px]">Vis Elementer:</span>
+        <div class="flex items-center gap-4">
+          <label class="flex items-center gap-1.5 cursor-pointer">
+            <input type="checkbox" id="toggleShowPostcode" checked onchange="togglePostcodeVisibility(this.checked)" class="w-3.5 h-3.5 accent-white">
+            <span class="text-[11px] text-neutral-300">Postnr.</span>
+          </label>
+          <label class="flex items-center gap-1.5 cursor-pointer">
+            <input type="checkbox" id="toggleShowAddressMaster" checked onchange="toggleAddressVisibility(this.checked)" class="w-3.5 h-3.5 accent-white">
+            <span class="text-[11px] text-neutral-300">Adresse</span>
+          </label>
+        </div>
+      </div>
+
       <!-- Sub-tabs for Settings -->
       <div class="flex border-b border-neutral-800 bg-[#141414] sticky top-0 z-20 text-[11px] font-medium">
         <button onclick="switchTab('data')" id="tabBtn-data" class="nav-tab active flex-1 py-2.5 px-1 text-center hover:text-white transition">
@@ -193,7 +208,7 @@
         </div>
       </div>
 
-      <!-- TAB 3: TYPOGRAFI (MED VÆGT OG ADRESSE SLIDERS) -->
+      <!-- TAB 3: TYPOGRAFI -->
       <div id="tab-typography" class="p-3.5 space-y-3.5 hidden">
         
         <!-- 1. Biografnavne -->
@@ -222,7 +237,7 @@
         </div>
 
         <!-- 2. Postnummer -->
-        <div class="space-y-2.5 bg-[#202020] p-3 rounded border border-neutral-800">
+        <div id="postcodeTypographySection" class="space-y-2.5 bg-[#202020] p-3 rounded border border-neutral-800">
           <div class="flex items-center justify-between">
             <span class="text-xs font-bold text-white">Postnummer</span>
             <div class="flex gap-1 text-[10px]">
@@ -246,8 +261,8 @@
           </div>
         </div>
 
-        <!-- 3. Adresse (Ny dedikeret sektion) -->
-        <div class="space-y-2.5 bg-[#202020] p-3 rounded border border-neutral-800">
+        <!-- 3. Adresse -->
+        <div id="addressTypographySection" class="space-y-2.5 bg-[#202020] p-3 rounded border border-neutral-800">
           <div class="flex items-center justify-between">
             <span class="text-xs font-bold text-white">Adresse</span>
             <div class="flex gap-1 text-[10px]">
@@ -300,7 +315,7 @@
 
       <!-- TAB 4: DOCKING -->
       <div id="tab-docking" class="p-3.5 space-y-3.5 hidden">
-        <div class="bg-[#202020] p-3 rounded border border-neutral-800 space-y-2.5">
+        <div id="postcodeDockingCard" class="bg-[#202020] p-3 rounded border border-neutral-800 space-y-2.5">
           <div class="flex justify-between items-center">
             <span class="text-xs font-bold text-white">Postnummer Forankring</span>
             <span class="text-[10px] text-neutral-400 uppercase">Satellit 1</span>
@@ -330,13 +345,10 @@
           </div>
         </div>
 
-        <div class="bg-[#202020] p-3 rounded border border-neutral-800 space-y-2.5">
+        <div id="addressDockingCard" class="bg-[#202020] p-3 rounded border border-neutral-800 space-y-2.5">
           <div class="flex justify-between items-center">
             <span class="text-xs font-bold text-white">Adresse Forankring</span>
-            <div class="flex items-center gap-1.5">
-              <span class="text-[10px] text-neutral-400">Aktivér</span>
-              <input type="checkbox" id="showAddressToggle" checked onchange="toggleShowAddress(this.checked)" class="w-3.5 h-3.5 accent-white">
-            </div>
+            <span class="text-[10px] text-neutral-400 uppercase">Satellit 2</span>
           </div>
 
           <div>
@@ -377,7 +389,7 @@
           </div>
         </div>
 
-        <div class="pt-1 flex justify-end">
+        <div id="swapBlocksBtnRow" class="pt-1 flex justify-end">
           <button onclick="toggleSwapBlocks()" class="text-[10px] px-2.5 py-1 rounded bg-neutral-800 border border-neutral-700 text-neutral-300 hover:text-white">
             ⇄ Byt Postnr & Navn Rækkefølge
           </button>
@@ -499,6 +511,10 @@
       autoFill: true,
       regionMarginBottom: 35,
 
+      // Master toggles
+      showPostalCode: true,
+      showAddress: true,
+
       // Typography sizes, tracking & weights
       venueFontSize: 22,
       venueLetterSpacing: -0.5,
@@ -521,7 +537,6 @@
       postcodeOffsetX: -4,
       postcodeOffsetY: -5,
 
-      showAddress: true,
       addressPosition: 'bottom',
       addressAlign: 'left',
       addressOffsetX: 0,
@@ -546,7 +561,46 @@
     window.addEventListener('DOMContentLoaded', () => {
       renderCinemaCards();
       renderPoster();
+      updateVisibilityPanels();
     });
+
+    function togglePostcodeVisibility(checked) {
+      state.showPostalCode = checked;
+      updateVisibilityPanels();
+      renderPoster();
+    }
+
+    function toggleAddressVisibility(checked) {
+      state.showAddress = checked;
+      updateVisibilityPanels();
+      renderPoster();
+    }
+
+    function updateVisibilityPanels() {
+      // Skjul/vis postnummer-paneler
+      const postTypo = document.getElementById('postcodeTypographySection');
+      const postDock = document.getElementById('postcodeDockingCard');
+      const swapBtn = document.getElementById('swapBlocksBtnRow');
+      if (postTypo) postTypo.style.display = state.showPostalCode ? 'block' : 'none';
+      if (postDock) postDock.style.display = state.showPostalCode ? 'block' : 'none';
+      if (swapBtn) swapBtn.style.display = state.showPostalCode ? 'flex' : 'none';
+
+      // Skjul/vis adresse-paneler
+      const addrTypo = document.getElementById('addressTypographySection');
+      const addrDock = document.getElementById('addressDockingCard');
+      if (addrTypo) addrTypo.style.display = state.showAddress ? 'block' : 'none';
+      if (addrDock) addrDock.style.display = state.showAddress ? 'block' : 'none';
+
+      // Skjul selve Docking fanen helt hvis hverken postnr eller adresse er synlige
+      const dockingTabBtn = document.getElementById('tabBtn-docking');
+      if (dockingTabBtn) {
+        if (!state.showPostalCode && !state.showAddress) {
+          dockingTabBtn.style.display = 'none';
+        } else {
+          dockingTabBtn.style.display = 'block';
+        }
+      }
+    }
 
     function switchTab(tabName) {
       ['data', 'layout', 'typography', 'docking', 'colors'].forEach(tab => {
@@ -747,7 +801,7 @@
             setUnit.style.transform = "none";
           }
 
-          // Main horizontal row: Venue name + Postal code
+          // Main horizontal row: Venue name + (optional) Postal code
           const mainRow = document.createElement('div');
           mainRow.className = "main-row inline-flex items-center relative z-10";
 
@@ -768,47 +822,54 @@
 
           nameBox.appendChild(nameText);
 
-          // Postal Code Block
-          const postalBox = document.createElement('div');
-          postalBox.className = "postal-box inline-flex items-center z-0";
-          postalBox.style.padding = `${3 * state.globalScale}px ${7 * state.globalScale}px`;
-          applyBoxStyling(postalBox, state.colorSecondaryBox);
+          // Postal Code Block (betinget af state.showPostalCode)
+          let postalBox = null;
+          if (state.showPostalCode && cinema.postal) {
+            postalBox = document.createElement('div');
+            postalBox.className = "postal-box inline-flex items-center z-0";
+            postalBox.style.padding = `${3 * state.globalScale}px ${7 * state.globalScale}px`;
+            applyBoxStyling(postalBox, state.colorSecondaryBox);
 
-          const pOffX = state.postcodeOffsetX * state.globalScale;
-          const pOffY = state.postcodeOffsetY * state.globalScale;
+            const pOffX = state.postcodeOffsetX * state.globalScale;
+            const pOffY = state.postcodeOffsetY * state.globalScale;
 
-          if (state.dockSide === 'right') {
-            postalBox.style.marginLeft = `${pOffX}px`;
-            postalBox.style.transform = `translateY(${pOffY}px)`;
-          } else if (state.dockSide === 'left') {
-            postalBox.style.marginRight = `${pOffX}px`;
-            postalBox.style.transform = `translateY(${pOffY}px)`;
-          } else if (state.dockSide === 'top') {
-            postalBox.style.transform = `translate(${pOffX}px, ${-16 * state.globalScale + pOffY}px)`;
-          } else if (state.dockSide === 'bottom') {
-            postalBox.style.transform = `translate(${pOffX}px, ${16 * state.globalScale + pOffY}px)`;
+            if (state.dockSide === 'right') {
+              postalBox.style.marginLeft = `${pOffX}px`;
+              postalBox.style.transform = `translateY(${pOffY}px)`;
+            } else if (state.dockSide === 'left') {
+              postalBox.style.marginRight = `${pOffX}px`;
+              postalBox.style.transform = `translateY(${pOffY}px)`;
+            } else if (state.dockSide === 'top') {
+              postalBox.style.transform = `translate(${pOffX}px, ${-16 * state.globalScale + pOffY}px)`;
+            } else if (state.dockSide === 'bottom') {
+              postalBox.style.transform = `translate(${pOffX}px, ${16 * state.globalScale + pOffY}px)`;
+            }
+
+            const postalText = document.createElement('span');
+            postalText.innerText = `(${cinema.postal})`;
+            postalText.style.fontSize = `${state.postcodeFontSize * state.globalScale}px`;
+            postalText.style.fontWeight = state.postcodeFontWeight;
+            postalText.style.letterSpacing = `${state.postcodeLetterSpacing}px`;
+            postalText.style.color = state.colorTextSecondary;
+            postalText.style.lineHeight = "1";
+            postalText.style.whiteSpace = "nowrap";
+
+            postalBox.appendChild(postalText);
           }
 
-          const postalText = document.createElement('span');
-          postalText.innerText = `(${cinema.postal})`;
-          postalText.style.fontSize = `${state.postcodeFontSize * state.globalScale}px`;
-          postalText.style.fontWeight = state.postcodeFontWeight;
-          postalText.style.letterSpacing = `${state.postcodeLetterSpacing}px`;
-          postalText.style.color = state.colorTextSecondary;
-          postalText.style.lineHeight = "1";
-          postalText.style.whiteSpace = "nowrap";
-
-          postalBox.appendChild(postalText);
-
-          if (state.swapBlocks) {
-            mainRow.appendChild(postalBox);
-            mainRow.appendChild(nameBox);
+          if (postalBox) {
+            if (state.swapBlocks) {
+              mainRow.appendChild(postalBox);
+              mainRow.appendChild(nameBox);
+            } else {
+              mainRow.appendChild(nameBox);
+              mainRow.appendChild(postalBox);
+            }
           } else {
             mainRow.appendChild(nameBox);
-            mainRow.appendChild(postalBox);
           }
 
-          // Build Address Block
+          // Build Address Block (betinget af state.showAddress)
           let addrBox = null;
           if (state.showAddress && cinema.address) {
             addrBox = document.createElement('div');
@@ -1078,11 +1139,6 @@
     function updateAddressOffsetY(val) {
       state.addressOffsetY = parseInt(val);
       document.getElementById('addressOffsetYVal').innerText = `${val}px`;
-      renderPoster();
-    }
-
-    function toggleShowAddress(checked) {
-      state.showAddress = checked;
       renderPoster();
     }
 
